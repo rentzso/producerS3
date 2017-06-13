@@ -34,24 +34,32 @@ object Producer {
     props.put("bootstrap.servers", "localhost:9092")
 
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-    props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+    props.put("value.serializer", "org.apache.kafka.common.serialization.BytesSerializer")
 
-    val producer = new KafkaProducer[String, String](props)
+    val producer = new KafkaProducer[String, Array[Byte]](props)
 
-    val obj = listings.tail.head
-
-    val key = obj.getKey()
-    val TOPIC = "fromS3"
+    for (obj <- listings){
 
 
-    val s3object = s3Client.getObject(new GetObjectRequest(bucket, key));
-    val content = s3object.getObjectContent()
-    val reader = new BufferedReader(new InputStreamReader(content))
-    var line = reader.readLine()
-    while (line != null) {
-      val record = new ProducerRecord(TOPIC, key, line)
-      producer.send(record)
-      line = reader.readLine()
+      val key = obj.getKey()
+      val TOPIC = "fromS3"
+      if (key.endsWith("gkg.csv")){
+        val s3object = s3Client.getObject(new GetObjectRequest(bucket, key))
+        val content = s3object.getObjectContent()
+        val reader = new BufferedReader(new InputStreamReader(content))
+        var line = reader.readLine()
+        while (line != null) {
+          try {
+            GdeltCsv2Avro.parse(line) match {
+              case Some(avroRecord) => producer.send(new ProducerRecord(TOPIC, key, avroRecord))
+              case None =>
+            }
+          } catch {
+            case e: Exception =>
+          }
+          line = reader.readLine()
+        }
+      }
     }
   }
 }
