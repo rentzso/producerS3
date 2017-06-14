@@ -72,11 +72,9 @@ object Producer {
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
     props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
     val numTasks = 5
-    for (i <- 0 until numTasks) {
-      task({
-        taskFromS3(summaries, props, bucket, i, numTasks)
-      })
-
-    }
+    val tasks = 0 until numTasks map(
+      i => task({taskFromS3(summaries, props, bucket, i, numTasks)})
+      )
+    tasks.foreach(_.join())
   }
 }
