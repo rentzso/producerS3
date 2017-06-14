@@ -34,7 +34,7 @@ object Producer {
     props.put("bootstrap.servers", "localhost:9092")
 
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-    props.put("value.serializer", "org.apache.kafka.common.serialization.BytesSerializer")
+    props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
 
     val producer = new KafkaProducer[String, Array[Byte]](props)
 
@@ -51,11 +51,16 @@ object Producer {
         while (line != null) {
           try {
             GdeltCsv2Avro.parse(line) match {
-              case Some(avroRecord) => producer.send(new ProducerRecord(TOPIC, key, avroRecord))
+              case Some(avroRecord) => {
+                producer.send(new ProducerRecord(TOPIC, key, avroRecord))
+              }
               case None =>
             }
           } catch {
-            case e: Exception =>
+            case e: Exception => {
+              print(key + " ")
+              println(e)
+            }
           }
           line = reader.readLine()
         }

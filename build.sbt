@@ -11,3 +11,4 @@ libraryDependencies += "org.apache.avro" % "avro" % "1.8.2"
 libraryDependencies += "com.twitter" % "bijection-avro_2.11" % "0.9.5"
 
 mainClass in assembly := Some("insightproject.s3.producer.Producer")
+
