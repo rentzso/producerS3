@@ -21,23 +21,24 @@ object Producer {
   def taskFromS3(summaries: java.util.List[S3ObjectSummary],
                  kafkaProps: Properties,
                  bucket: String, taskIndex: Int, numTasks: Int): Unit = {
+    val producer = new KafkaProducer[String, Array[Byte]](kafkaProps)
+    val s3Client = new AmazonS3Client(new EnvironmentVariableCredentialsProvider())
+    val TOPIC = "fromS3"
+    val rnd = scala.util.Random
     for (i <- Range(start = taskIndex, end = summaries.length, step = numTasks)) {
       val key = summaries(i).getKey()
-      val producer = new KafkaProducer[String, Array[Byte]](kafkaProps)
-      val s3Client = new AmazonS3Client(new EnvironmentVariableCredentialsProvider())
-      val TOPIC = "fromS3"
       if (key.endsWith("gkg.csv")) {
         val content = retry(3) {
           val s3object = s3Client.getObject(new GetObjectRequest(bucket, key))
           s3object.getObjectContent()
-        }
+       }
         val reader = new BufferedReader(new InputStreamReader(content))
         var line = reader.readLine()
         while (line != null) {
           try {
             GdeltCsv2Avro.parse(line) match {
               case Some(avroRecord) => {
-                producer.send(new ProducerRecord(TOPIC, key, avroRecord))
+                producer.send(new ProducerRecord(TOPIC, rnd.nextInt.toString, avroRecord))
               }
               case None =>
             }
