@@ -27,28 +27,28 @@ object Producer {
     val rnd = scala.util.Random
     for (i <- Range(start = taskIndex, end = summaries.length, step = numTasks)) {
       val key = summaries(i).getKey()
-      if (key.endsWith("gkg.csv")) {
-        val content = retry(3) {
+      retry(3) {
+        if (key.endsWith("gkg.csv")) {
           val s3object = s3Client.getObject(new GetObjectRequest(bucket, key))
-          s3object.getObjectContent()
-       }
-        val reader = new BufferedReader(new InputStreamReader(content))
-        var line = reader.readLine()
-        while (line != null) {
-          try {
-            GdeltCsv2Avro.parse(line) match {
-              case Some(avroRecord) => {
-                producer.send(new ProducerRecord(TOPIC, rnd.nextInt.toString, avroRecord))
+          val content = s3object.getObjectContent()
+          val reader = new BufferedReader(new InputStreamReader(content))
+          var line = reader.readLine()
+          while (line != null) {
+            try {
+              GdeltCsv2Avro.parse(line) match {
+                case Some(avroRecord) => {
+                  producer.send(new ProducerRecord(TOPIC, rnd.nextInt.toString, avroRecord))
+                }
+                case None =>
               }
-              case None =>
+            } catch {
+              case e: Exception => {
+                print(key + " ")
+                println(e)
+              }
             }
-          } catch {
-            case e: Exception => {
-              print(key + " ")
-              println(e)
-            }
+            line = reader.readLine()
           }
-          line = reader.readLine()
         }
       }
     }
@@ -72,10 +72,17 @@ object Producer {
     props.put("bootstrap.servers", "localhost:9092")
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
     props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
-    val numTasks = 5
-    val tasks = 0 until numTasks map(
-      i => task({taskFromS3(summaries, props, bucket, i, numTasks)})
-      )
-    tasks.foreach(_.join())
+    if (args.size == 1) {
+      val numTasks = 5
+      val tasks = 0 until numTasks map(
+        i => task({taskFromS3(summaries, props, bucket, i, numTasks)})
+        )
+      tasks.foreach(_.join())
+    } else {
+      val taskIndex = args(0).toInt
+      val numTasks = args(1).toInt
+      taskFromS3(summaries, props, bucket, taskIndex, numTasks)
+    }
+
   }
 }
