@@ -1,15 +1,12 @@
 package insightproject.s3.producer
 
-import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
-
 import scala.collection.JavaConversions._
 import com.amazonaws.services.s3.model.{GetObjectRequest, ListObjectsRequest, S3ObjectSummary}
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Properties
-
 import org.apache.kafka.clients.producer._
 
 
@@ -33,7 +30,9 @@ object Producer {
           val content = s3object.getObjectContent()
           val reader = new BufferedReader(new InputStreamReader(content))
           var line = reader.readLine()
+          // scalastyle:off
           while (line != null) {
+            //scalastyle:on
             try {
               GdeltCsv2Avro.parse(line) match {
                 case Some(avroRecord) => {

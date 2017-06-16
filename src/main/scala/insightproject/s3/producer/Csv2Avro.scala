@@ -69,7 +69,7 @@ object GdeltCsv2Avro {
       None
     }
   }
-  def parse(line: String) = {
+  def parse(line: String):Option[Array[Byte]] = {
     val rawValues = line.split("\t")
     if (rawValues(indexOf("V2SOURCECOLLECTIONIDENTIFIER")) == "1") {
       val topics = separators.flatMap(fieldConverter => {
