@@ -79,7 +79,11 @@ object GdeltCsv2Avro {
             case Some(s) => convertMethod(s)
             case None => Array.empty[String]
           }
-      }).toSet.asJava
+      }).filter(
+        (s) => s.size != 0 //remove empty strings
+      ).map(
+        _.replace(", ", ",").replace(" ", "_") //remove spaces from topics
+      ).toSet.asJava
       val avroRecord = new GenericData.Record(gdeltAvroSchema)
       avroRecord.put("id", rawValues(indexOf("GKGRECORDID")))
       avroRecord.put("date", rawValues(indexOf("V2.1DATE")))
