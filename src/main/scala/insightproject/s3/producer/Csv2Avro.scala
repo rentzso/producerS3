@@ -89,6 +89,7 @@ object GdeltCsv2Avro {
       avroRecord.put("date", rawValues(indexOf("V2.1DATE")))
       avroRecord.put("url", rawValues(indexOf("V2DOCUMENTIDENTIFIER")))
       avroRecord.put("topics", topics)
+      avroRecord.put("num_topics", topics.size())
       Option(recordInjection(avroRecord))
     } else {
       None
