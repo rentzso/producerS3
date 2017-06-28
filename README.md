@@ -1,1 +1,7 @@
 # producerS3
+part of the Insight Project [nexTop](https://github.com/rentzso/nextop)
+
+This library runs a Kafka Producer that does the following:
+- pulls data from the GDELT dataset stored in S3
+- for each line returns an Avro message, with a URL and topics
+- push these messages on a Kafka topic
