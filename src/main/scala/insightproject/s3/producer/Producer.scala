@@ -1,5 +1,7 @@
 package insightproject.s3.producer
-
+/**
+  * Created by rfrigato on 6/11/17.
+  */
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
 
@@ -14,12 +16,23 @@ import org.apache.log4j.{Logger, PropertyConfigurator}
 
 
 /**
-  * Created by rfrigato on 6/11/17.
+  * Kafka Producer to send the parsed records from the GDELT project
   */
 object Producer {
   val logger = Logger.getLogger("ProducerGDELT")
   PropertyConfigurator.configure("log4j.properties")
 
+  /**
+    * Creates a task to read the "taskIndex" file every "numTasks" files
+    * in the S3 listing
+    *
+    * @param summaries list of S3 files we are producing messages from
+    * @param kafkaProps properties of the Kafka Producer
+    * @param topic Kafka topic we are publishing to
+    * @param bucket S3 bucket from which we are reading files
+    * @param taskIndex index of this producer task
+    * @param numTasks total number of tasks
+    */
   def taskFromS3(summaries: java.util.List[S3ObjectSummary],
                  kafkaProps: Properties, topic: String,
                  bucket: String, taskIndex: Int, numTasks: Int): Unit = {
@@ -71,11 +84,13 @@ object Producer {
       .withPrefix(S3FOLDER)
       .withMarker(S3FOLDER)
     var listing = s3Client.listObjects(listObjectsRequest)
+    // Loads all the S3 files in the summaries List
     val summaries = listing.getObjectSummaries
     while (listing.isTruncated()) {
       listing = s3Client.listNextBatchOfObjects (listing)
       summaries.addAll (listing.getObjectSummaries())
     }
+    // Sets the kafka properties
     val props = new Properties()
     props.put("bootstrap.servers", sys.env.getOrElse("BOOTSTRAP_SERVERS", "localhost:9092"))
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
@@ -93,14 +108,14 @@ object Producer {
           |  numTasks: the number of parallel tasks
           |  taskIndex: if used, the program will be single threaded and will run this task number
         """.replace("\r", "").stripMargin)
-    } else if (args.size == 2) {
+    } else if (args.size == 2) { // Runs numTasks in parallel
       val topic = args(0)
       val numTasks = args(1).toInt
       val tasks = 0 until numTasks map(
         i => task({taskFromS3(summaries, props, topic, BUCKET, i, numTasks)})
         )
       tasks.foreach(_.join())
-    } else {
+    } else { //Runs the "taskIndex" of "numTasks" (used when multiple producers have been run on different machines)
       val topic = args(0)
       val numTasks = args(1).toInt
       val taskIndex = args(2).toInt
